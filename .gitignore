@@ -1,0 +1,11 @@
+node_modules
+build/*
+npm-debug.log
+*.sw?
+.idea*
+claudia.config
+claudia.json
+.env
+.nyc_output
+coverage
+.nyc_output
