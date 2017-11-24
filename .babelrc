@@ -1,4 +1,12 @@
 {
-  "plugins": ["babel-polyfill"],
-  "presets": ["latest"]
+  "presets": [
+    [
+      "env",
+      {
+        "targets": {
+          "node": "current"
+        }
+      }
+    ]
+  ]
 }

@@ -5,7 +5,7 @@ import Handlebars from "handlebars";
 import PathEncoder from "./PathEncoder";
 import s3BrowserDirectUpload from "s3-browser-direct-upload";
 
-class ImageButlerForm {
+module.exports = class ImageButlerForm {
   /**
    * Outputs a form or form attributes for uploading a file to S3 with image-butler
    *
@@ -41,7 +41,10 @@ class ImageButlerForm {
   }
 
   form() {
-    const templatePath = path.join(__dirname, "form.handlebars.html");
+    const templatePath = path.join(
+      __dirname,
+      "../templates/form.handlebars.html"
+    );
     const template = Handlebars.compile(fs.readFileSync(templatePath, "utf8"));
 
     return template(this.formData());
@@ -90,6 +93,4 @@ class ImageButlerForm {
       }
     });
   }
-}
-
-export default ImageButlerForm;
+};

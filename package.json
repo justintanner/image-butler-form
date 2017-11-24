@@ -2,8 +2,10 @@
   "name": "image-butler-form",
   "version": "0.0.9",
   "description": "",
-  "main": "index.js",
+  "main": "./distribution/ImageButlerForm.js",
   "scripts": {
+    "prepublish": "npm run build",
+    "build": "babel src --out-dir distribution",
     "lint": "prettier --write '{test,src}/**/*.js'",
     "precommit": "lint-staged",
     "test": "nyc ava"
@@ -19,24 +21,19 @@
   },
   "homepage": "https://github.com/justintanner/image-butler-form#readme",
   "devDependencies": {
-    "app-root-path": "^2.0.1",
     "ava": "^0.22.0",
+    "babel-cli": "^6.26.0",
     "babel-eslint": "^7.2.3",
+    "babel-preset-env": "^1.6.1",
     "coveralls": "^3.0.0",
     "eslint": "^4.1.1",
     "eslint-plugin-prettier": "^2.1.2",
     "husky": "^0.14.3",
     "lint-staged": "^5.0.0",
     "nyc": "^11.2.1",
-    "prettier": "^1.5.3",
-    "sinon": "^2.3.8"
+    "prettier": "^1.5.3"
   },
   "dependencies": {
-    "babel-cli": "^6.24.1",
-    "babel-polyfill": "^6.23.0",
-    "babel-preset-latest": "^6.24.1",
-    "babel-register": "^6.24.1",
-    "crypto": "^1.0.1",
     "handlebars": "^4.0.11",
     "s3-browser-direct-upload": "^0.1.2",
     "underscore": "^1.8.3",
