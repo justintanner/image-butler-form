@@ -2,8 +2,9 @@ import _ from "underscore";
 import fs from "fs";
 import path from "path";
 import Handlebars from "handlebars";
+import crypto from "crypto";
+import moment from "moment";
 import PathEncoder from "./PathEncoder";
-import s3BrowserDirectUpload from "s3-browser-direct-upload";
 
 module.exports = class ImageButlerForm {
   /**
@@ -38,6 +39,13 @@ module.exports = class ImageButlerForm {
       cropOriginal: options.cropOriginal,
       rotateOriginal: options.rotateOriginal
     });
+
+    const now = moment().utc();
+    this._shortExpirationStartDate = now.format("YYYYMMDD");
+    this._longExpirationStartDate = now.format("YYYYMMDD[T]HHmmss[Z]");
+    this._expirationEndDate = now
+      .add(7, "days")
+      .format("YYYY-MM-DD[T]HH:mm:ss[Z]");
   }
 
   form() {
@@ -51,31 +59,73 @@ module.exports = class ImageButlerForm {
   }
 
   formData() {
-    const s3clientOptions = {
-      accessKeyId: this._options.awsAccessKeyId,
-      secretAccessKey: this._options.awsSecretAccessKey,
-      region: this._options.awsRegion
-    };
-
-    const allowedTypes = ["jpg", "png"];
-
-    const s3client = new s3BrowserDirectUpload(s3clientOptions, allowedTypes);
-
-    const formOptions = {
+    return {
+      action: `https://${this._options.s3Bucket}.s3.amazonaws.com/`,
       key: this._pathEncoder.pathWithPlaceholders(),
-      bucket: this._options.s3Bucket,
-      region: this._options.awsRegion
+      acl: "public-read",
+      "x-amz-algorithm": "AWS4-HMAC-SHA256",
+      "x-amz-date": this._longExpirationStartDate,
+      "x-amz-expires": 604800, // Max expiration 7 days
+      "x-amz-credential": this._credential(),
+      policy: this._encodedPolicy(),
+      "x-amz-signature": this._signature()
     };
+  }
 
-    return s3client.uploadPostForm(formOptions, (error, data) => {
-      if (error) {
-        throw error;
-      }
+  _credential() {
+    const key = this._options.awsAccessKeyId;
+    const date = this._shortExpirationStartDate;
+    const region = this._options.awsRegion;
 
-      //console.log(JSON.stringify(data));
+    return `${key}/${date}/${region}/s3/aws4_request`;
+  }
 
-      return _.extend({ action: data.form_url }, data.params);
-    });
+  _policy() {
+    return {
+      expiration: this._expirationEndDate,
+      conditions: [
+        ["starts-with", "$key", "uploads/"],
+        { bucket: this._options.s3Bucket },
+        { acl: "public-read" },
+        { "x-amz-algorithm": "AWS4-HMAC-SHA256" },
+        { "x-amz-date": this._longExpirationStartDate },
+        { "x-amz-credential": this._credential() }
+      ]
+    };
+  }
+
+  _encodedPolicy() {
+    return new Buffer(JSON.stringify(this._policy())).toString("base64");
+  }
+
+  _signature() {
+    // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+    const algorithm = "sha256";
+
+    const dateKey = crypto
+      .createHmac(algorithm, `AWS4${this._options.awsSecretAccessKey}`)
+      .update(this._shortExpirationStartDate)
+      .digest();
+
+    const dateRegionKey = crypto
+      .createHmac(algorithm, dateKey)
+      .update(this._options.awsRegion)
+      .digest();
+
+    const dateRegionServiceKey = crypto
+      .createHmac(algorithm, dateRegionKey)
+      .update("s3")
+      .digest();
+
+    const signingKey = crypto
+      .createHmac(algorithm, dateRegionServiceKey)
+      .update("aws4_request")
+      .digest();
+
+    return crypto
+      .createHmac(algorithm, signingKey)
+      .update(this._encodedPolicy())
+      .digest("hex");
   }
 
   _validateRequiredOptions() {

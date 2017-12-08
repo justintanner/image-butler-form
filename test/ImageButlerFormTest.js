@@ -42,10 +42,18 @@ test("creates valid form data to post to s3 directly", async t => {
   );
   t.is(formData.acl, "public-read");
   t.is(formData["x-amz-algorithm"], "AWS4-HMAC-SHA256");
-  t.true(_.isString(formData["x-amz-credential"]));
-  t.true(_.isString(formData["x-amz-date"]));
+
+  t.regex(
+    formData["x-amz-credential"],
+    /b\/[0-9]+\/us-west-1\/s3\/aws4_request/
+  );
+
+  t.regex(formData["x-amz-date"], /[0-9]+T[0-9]+Z/);
+
+  t.is(formData["x-amz-expires"], 604800);
   t.true(_.isString(formData.policy));
   t.true(_.isString(formData["x-amz-signature"]));
+  // TODO: Verify this signature!
 });
 
 test("throw an error when no options are passed in", async t => {
